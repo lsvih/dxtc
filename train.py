@@ -18,48 +18,91 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 from tqdm import tqdm
-
+from time import clock
 from dataset import load_data
 
-X_train, X_val, y_train, y_val, test = load_data()
-# xgboost 要求 label 是 range(0, num_class)，故替换
-label_set = {90063345: 201245, 89950166: 93252, 89950167: 51440, 99999828: 37146,
-             89016252: 36379, 90109916: 26685, 89950168: 23316,
-             99999827: 22753, 99999826: 20393, 90155946: 15477, 99999830: 14840,
-             99999825: 14323, 89016253: 10019, 89016259: 9095}
-label_set = {k: v for v, k in enumerate(label_set.keys())}
+MODE = 'TRAIN'  # TEST | TRAIN | LOAD
+assert MODE in ['TEST', 'TRAIN', 'LOAD']
+print('This is %s mode' % MODE)
 
-for service in label_set.keys():
-    y_train[y_train == service] = label_set[service]
-    y_val[y_val == service] = label_set[service]
+train, val, test = load_data()
 
-param = {'max_depth': 6, 'silent': 0, 'objective': 'multi:softprob',
-         'subsample': 0.9, 'colsample_bytree': 0.9,
-         'learning_rate': 0.1, 'nthread': 24, 'min_child_weight': 2,
-         'lambda': 1, 'alpha': 0, 'gamma': 0, 'num_class': 15}
+# Split data into 2 pieces by service_type:
+service_1_label = [90063345, 90109916, 90155946]
+service_4_label = [89950166, 89950167, 99999828, 89016252, 89950168, 99999827, 99999826, 99999830, 99999825, 89016253,
+                   89016259]
+label_set_1 = {k: v for v, k in enumerate(service_1_label)}
+label_set_4 = {k: v for v, k in enumerate(service_4_label)}
 
-train_data = xgb.DMatrix(data=X_train, label=y_train.values.ravel())
-val_data = xgb.DMatrix(data=X_val, label=y_val)
-print('fitting...')
-# model = xgb.train(param, train_data, 800, evals=[(train_data, 'train'), (val_data, 'eval')], early_stopping_rounds=50)
-# model = xgb.train(param, train_data, 1000)
-# model.save_model('./temp/xgb.model')
+train_1, train_4 = train[train.service_type_0 == 1], train[train.service_type_1 == 1]
+val_1, val_4 = val[val.service_type_0 == 1], val[val.service_type_1 == 1]
 
-model = xgb.Booster({'nthread': 24})
-model.load_model("./temp/xgb.model")
+train_1_X = train_1.drop(['current_service', 'service_type_0', 'service_type_1'], axis=1)
+train_4_X = train_4.drop(['current_service', 'service_type_0', 'service_type_1'], axis=1)
+val_1_X = val_1.drop(['current_service', 'service_type_0', 'service_type_1'], axis=1)
+val_4_X = val_4.drop(['current_service', 'service_type_0', 'service_type_1'], axis=1)
 
-test_data = xgb.DMatrix(data=test.values)
+train_1_y, train_4_y = train_1[['current_service']], train_4[['current_service']]
+val_1_y, val_4_y = val_1[['current_service']], val_4[['current_service']]
+
+for service in label_set_1.keys():
+    train_1_y[train_1_y == service] = label_set_1[service]
+    val_1_y[val_1_y == service] = label_set_1[service]
+
+for service in label_set_4.keys():
+    train_4_y[train_4_y == service] = label_set_4[service]
+    val_4_y[val_4_y == service] = label_set_4[service]
+
+train_1 = xgb.DMatrix(data=train_1_X.values, label=train_1_y.values.ravel())
+train_4 = xgb.DMatrix(data=train_4_X.values, label=train_4_y.values.ravel())
+val_1 = xgb.DMatrix(data=val_1_X.values, label=val_1_y.values.ravel())
+val_4 = xgb.DMatrix(data=val_4_X.values, label=val_4_y.values.ravel())
+
+if MODE == 'TEST':
+    param1 = {'max_depth': 6, 'silent': 0, 'objective': 'multi:softprob', 'num_class': 3}
+    param4 = {'max_depth': 6, 'silent': 0, 'objective': 'multi:softprob', 'num_class': 11}
+    model1 = xgb.train(param1, train_1, 800, evals=[(train_1, 'train'), (val_1, 'eval')],
+                       early_stopping_rounds=50)
+    model4 = xgb.train(param, train_4, 800, evals=[(train_4, 'train'), (val_4, 'eval')],
+                       early_stopping_rounds=50)
+elif MODE == 'TRAIN':
+    start = clock()
+    param1 = {'max_depth': 6, 'silent': 1, 'objective': 'multi:softprob', 'num_class': 3}
+    param4 = {'max_depth': 6, 'silent': 1, 'objective': 'multi:softprob', 'num_class': 11}
+    print('Fitting model 1...')
+    model1 = xgb.train(param1, train_1, 1000)
+    model1.save_model('./temp/xgb1.model')
+    print('Fitting model 4...')
+    model4 = xgb.train(param4, train_4, 1000)
+    model4.save_model('./temp/xgb4.model')
+    finish = clock()
+    print("{:10.6} s".format(finish - start))
+elif MODE == 'LOAD':
+    model1, model4 = xgb.Booster({'nthread': 24}), xgb.Booster({'nthread': 24})
+    model1.load_model('./temp/xgb1.model')
+    model4.load_model('./temp/xgb4.model')
+
+# Predict
+test_1, test_4 = test[test.service_type_0 == 1], test[test.service_type_1 == 1]
+result_1, result_4 = test_1[['user_id']], test_4[['user_id']]
+test_1, test_4 = xgb.DMatrix(data=test_1.drop('user_id').values), xgb.DMatrix(data=test_4.drop('user_id').values)
 print('predict...')
-rs = model.predict(test_data)
-result = np.argmax(rs, axis=1)
-inverse_label = {v: k for v, k in enumerate(label_set.keys())}
+rs_1, rs_4 = model1.predict(test_1), model4.predict(test_4)
+rs_1, rs_4 = np.argmax(rs_1, axis=1), np.argmax(rs_4, axis=1)
+inverse_label_1 = {v: k for v, k in enumerate(label_set_1.keys())}
+inverse_label_4 = {v: k for v, k in enumerate(label_set_4.keys())}
 
-for i, v in enumerate(result):
-    result[i] = inverse_label[v]
+for i, v in enumerate(rs_1):
+    rs_1[i] = inverse_label_1[v]
+for i, v in enumerate(rs_4):
+    rs_4[i] = inverse_label_4[v]
+
+result_1['predict'], result_4['predict'] = rs_1, rs_4
 
 data = pd.read_csv('./data/submit_sample.csv')
 same = pd.read_csv('./temp/known.csv')
-data['predict'] = result
+
+data = pd.merge(data, pd.concat([result_1, result_2]), how='left', on='user_id')
 
 # Merge duplicate data
 for i, user_id in enumerate(tqdm(list(same['user_id'].items()))):

@@ -19,10 +19,13 @@ def load_data():
     print('Loading dataset...')
     train_data = pd.read_csv('./data/train.csv', index_col='user_id')
     test_data = pd.read_csv('./data/test.csv', index_col='user_id')
-    one_hot_feature = ['service_type', 'contract_type', 'complaint_level', 'gender', 'net_service']
+    one_hot_feature = ['service_type', 'contract_type', 'complaint_level', 'gender', 'net_service', 'is_mix_service',
+                       'many_over_bill', 'is_promise_low_consume']
     range_features = ['online_time', '1_total_fee', '2_total_fee', '3_total_fee', '4_total_fee', 'month_traffic',
                       'local_trafffic_month', 'local_caller_time', 'service1_caller_time', 'service2_caller_time',
-                      'age', 'former_complaint_fee']
+                      'age', 'former_complaint_fee', 'contract_time', 'pay_times', 'pay_num', 'last_month_traffic',
+                      'former_complaint_num']
+
 
     if not os.path.exists('./temp/known.csv'):
         type_3_test = test_data[test_data['service_type'] == 3].reset_index()[['user_id']]
@@ -62,23 +65,24 @@ def load_data():
     # Fill missed age
     train_data, test_data = fill_age(train_data, test_data)
 
-    train_data[['contract_type', 'net_service', 'complaint_level']] = train_data[
-        ['contract_type', 'net_service', 'complaint_level']].astype(str)
-    test_data[['contract_type', 'net_service', 'complaint_level']] = test_data[
-        ['contract_type', 'net_service', 'complaint_level']].astype(str)
+    train_data[['contract_type', 'net_service', 'complaint_level']] \
+        = train_data[['contract_type', 'net_service', 'complaint_level']].astype(str)
+    test_data[['contract_type', 'net_service', 'complaint_level']] \
+        = test_data[['contract_type', 'net_service', 'complaint_level']].astype(str)
 
-    train = train_data[range_features].astype('float64')
-    test = test_data[range_features].astype('float64')
+    train, test = train_data[range_features].astype('float64'), test_data[range_features].astype('float64')
 
-    enc = OneHotEncoder(sparse=False)
+    enc = OneHotEncoder()
     for feature in one_hot_feature:
         enc.fit(train_data[feature].values.reshape(-1, 1))
-        train[feature] = enc.transform(train_data[feature].reshape(1, -1))
-        test[feature] = enc.transform(test_data[feature].reshape(1, -1))
+        train_a = enc.transform(train_data[feature].values.reshape(-1, 1)).toarray()
+        test_a = enc.transform(test_data[feature].values.reshape(-1, 1)).toarray()
+        train_b, test_b = pd.DataFrame(train_a, index=train.index), pd.DataFrame(test_a, index=test.index)
+        train_b.columns, test_b.columns = [list(map(lambda x: feature + '_' + str(x), range(train_a.shape[1])))] * 2
+        train, test = pd.concat([train, train_b], axis = 1), pd.concat([test, test_b], axis = 1)
+        dataset = pd.concat([train, labels], axis=1)
+        train, val = train_test_split(dataset, test_size=0.23, random_state=42)
+        return train, val, test
 
-    X_train, X_val, y_train, y_val = train_test_split(train, labels, test_size=0, random_state=42)
-    return X_train, X_val, y_train, y_val, test
-
-
-if __name__ == '__main__':
-    load_data()
+    if __name__ == '__main__':
+        load_data()
