@@ -3,6 +3,7 @@ from time import clock
 import numpy as np
 import pandas as pd
 import xgboost as xgb
+from sklearn.model_selection import GridSearchCV
 
 from dataset import load_data
 
@@ -45,21 +46,31 @@ val_4 = xgb.DMatrix(data=val_4_X.values, label=val_4_y.values.ravel())
 
 model1, model4 = None, None
 if MODE == 'TEST':
-    param1 = {'max_depth': 6, 'silent': 1, 'objective': 'multi:softprob', 'num_class': 3}
-    param4 = {'max_depth': 6, 'silent': 1, 'objective': 'multi:softprob', 'num_class': 11}
-    model1 = xgb.train(param1, train_1, 200, evals=[(train_1, 'train'), (val_1, 'eval')],
-                       early_stopping_rounds=50)
-    model4 = xgb.train(param4, train_4, 200, evals=[(train_4, 'train'), (val_4, 'eval')],
-                       early_stopping_rounds=50)
+    # param1 = {'max_depth': 6, 'silent': 1, 'objective': 'multi:softprob', 'num_class': 3}
+    param4 = {'learning_rate': 0.05, 'n_estimators': 400, 'max_depth': 6, 'min_child_weight': 1, 'seed': 0,
+              'subsample': 0.8, 'colsample_bytree': 0.8, 'gamma': 0, 'reg_alpha': 0, 'reg_lambda': 1, 'n_jobs': -1}
+    model4 = xgb.XGBClassifier(**param4)
+    cv_params = {'max_depth': [4, 6, 8, 10]}
+    optimized_GBM = GridSearchCV(estimator=model4, param_grid=cv_params, scoring='r2', cv=5, verbose=1, n_jobs=4)
+    optimized_GBM.fit(train_1_X.values, train_1_y.values.ravel())
+    print('Best value: {0}'.format(optimized_GBM.best_params_))
+    print('Best score: {0}'.format(optimized_GBM.best_score_))
+    exit(0)
+    # model1 = xgb.train(param1, train_1, 200, evals=[(train_1, 'train'), (val_1, 'eval')],
+    #                    early_stopping_rounds=50)
+    # model4 = xgb.train(param4, train_4, 200, evals=[(train_4, 'train'), (val_4, 'eval')],
+    #                    early_stopping_rounds=50)
 elif MODE == 'TRAIN':
     start = clock()
     param1 = {'max_depth': 6, 'silent': 1, 'objective': 'multi:softprob', 'num_class': 3}
-    param4 = {'max_depth': 6, 'silent': 1, 'objective': 'multi:softprob', 'num_class': 11}
+    param4 = {'learning_rate': 0.05, 'n_estimators': 400, 'max_depth': 6, 'min_child_weight': 1, 'seed': 0,
+              'subsample': 0.8, 'colsample_bytree': 0.8, 'gamma': 0, 'reg_alpha': 0, 'reg_lambda': 1, 'n_jobs': -1,
+              'num_class': 11, 'silent': 1, 'objective': 'multi:softprob'}
     print('Fitting model 1...')
-    model1 = xgb.train(param1, train_1, 1200)
+    model1 = xgb.train(param1, train_1, 1500)
     model1.save_model('./temp/xgb1.model')
     print('Fitting model 4...')
-    model4 = xgb.train(param4, train_4, 1200)
+    model4 = xgb.train(param4, train_4, 1500)
     model4.save_model('./temp/xgb4.model')
     finish = clock()
     print("{:10.6} s".format(finish - start))

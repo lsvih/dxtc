@@ -61,6 +61,12 @@ def load_data():
     train_data['gender'] = train_data['gender'].replace('02', '2')
     train_data['gender'] = train_data['gender'].astype(int)
 
+    test_data['gender'] = test_data['gender'].fillna('0')
+    test_data['gender'] = test_data['gender'].replace('00', '0')
+    test_data['gender'] = test_data['gender'].replace('01', '1')
+    test_data['gender'] = test_data['gender'].replace('02', '2')
+    test_data['gender'] = test_data['gender'].astype(int)
+
     # Fill missed age
     train_data, test_data = fill_age(train_data, test_data)
 
