@@ -70,6 +70,35 @@ def load_data():
     # Fill missed age
     train_data, test_data = fill_age(train_data, test_data)
 
+    limit_map = {'1_total_fee': 1000, '2_total_fee': 1000, '3_total_fee': 1000, '4_total_fee': 1000,
+                 'local_caller_time': 1000, 'service1_caller_time': 1000, 'service2_caller_time': 1000,
+                 'month_traffic': 40000, 'local_trafffic_month': 25000, 'pay_num': 500, 'pay_times': 12,
+                 'former_complaint_fee': 0.15, 'contract_time': 35}
+
+    # 所有数值特征的异常值置为0
+    for feature in range_features:
+        train_data[feature] = train_data[feature].replace('\\N', np.nan)
+        train_data[feature] = train_data[feature].astype(float)
+        train_data.loc[train_data[feature] < 0, feature] = np.nan
+
+        test_data[feature] = test_data[feature].replace('\\N', np.nan)
+        test_data[feature] = test_data[feature].astype(float)
+        test_data.loc[test_data[feature] < 0, feature] = np.nan
+
+        try:
+            mode_item = float(train_data[feature].mode().item())
+            train_data[feature] = train_data[feature].fillna(mode_item).astype(float)
+            train_data.loc[train_data[feature] > limit_map[feature], feature] = float(limit_map[feature])
+        except:
+            pass
+
+        try:
+            mode_item = float(test_data[feature].mode().item())
+            test_data[feature] = test_data[feature].fillna(mode_item).astype(float)
+            test_data.loc[test_data[feature] > limit_map[feature], feature] = float(limit_map[feature])
+        except:
+            pass
+
     train_data[['contract_type', 'net_service', 'complaint_level']] \
         = train_data[['contract_type', 'net_service', 'complaint_level']].astype(str)
     test_data[['contract_type', 'net_service', 'complaint_level']] \
@@ -87,7 +116,7 @@ def load_data():
         train, test = pd.concat([train, train_b], axis=1), pd.concat([test, test_b], axis=1)
 
     dataset = pd.concat([train, labels], axis=1)
-    train, val = train_test_split(dataset, test_size=0.23, random_state=42)
+    train, val = train_test_split(dataset, test_size=0, random_state=42)
     return train, val, test
 
 
