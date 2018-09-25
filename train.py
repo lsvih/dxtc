@@ -37,7 +37,6 @@ train_1_X = train_1.drop(['current_service', 'service_type'], axis=1)
 train_4_X = train_4.drop(['current_service', 'service_type'], axis=1)
 val_1_X = val_1.drop(['current_service', 'service_type'], axis=1)
 val_4_X = val_4.drop(['current_service', 'service_type'], axis=1)
-
 train_1_y, train_4_y = train_1[['current_service']], train_4[['current_service']]
 val_1_y, val_4_y = val_1[['current_service']], val_4[['current_service']]
 
@@ -157,3 +156,5 @@ data = data.apply(y2x, axis=1).drop('current_service_y', axis=1).rename(columns=
 
 data['current_service'] = data['current_service'].astype(int)
 data.to_csv('./temp/submission.csv', index=False)
+
+
