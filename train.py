@@ -5,7 +5,7 @@ import pandas as pd
 import xgboost as xgb
 from sklearn.model_selection import GridSearchCV
 
-from dataset import load_data
+from feature import load_data
 
 MODE = 'TRAIN'  # TEST | TRAIN | LOAD
 assert MODE in ['TEST', 'TRAIN', 'LOAD']
