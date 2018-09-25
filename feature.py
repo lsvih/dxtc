@@ -1,10 +1,12 @@
 import os
+import warnings
 
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 
+warnings.filterwarnings('ignore')
 from age import fill_age
 
 
@@ -28,18 +30,21 @@ def load_data():
 
     if not os.path.exists('./temp/known.csv'):
         type_3_test = test_data[test_data['service_type'] == 3].reset_index()[['user_id']]
-        type_3_test['predict'] = 99104722
+        type_3_test['current_service'] = 99104722
         train_test_same = \
             pd.merge(train_data.reset_index(), test_data.reset_index(), how='inner', on=list(test_data.columns)[:-1])[
                 ['user_id_y', 'current_service']].rename(
-                columns={'user_id_y': 'user_id', 'current_service': 'predict'})
+                columns={'user_id_y': 'user_id'})
         known_test = type_3_test.append(train_test_same).drop_duplicates('user_id')
         known_test.to_csv('./temp/known.csv', index=False)
 
     # There is nobody with service type 3.
     # Drop service type == 3
+    # 89016252，89016259 ，89016253
+    train_data = train_data[train_data.current_service != 99104722][train_data.current_service != 89016252][
+        train_data.current_service != 89016259][train_data.current_service != 89016253]
     train_data = train_data[train_data.service_type != 3]
-    test_data = test_data[test_data.service_type != 3]
+    # test_data = test_data[test_data.service_type != 3]
 
     # Process invalid values.
     train_data = train_data.replace('\\N', np.nan)
