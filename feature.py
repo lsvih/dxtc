@@ -28,6 +28,9 @@ def load_data():
                       'age', 'former_complaint_fee', 'contract_time', 'pay_times', 'pay_num', 'last_month_traffic',
                       'former_complaint_num', 'service_type']  # service_type is a one hot feature
 
+    one_hot_feature.remove('net_service')
+    one_hot_feature.remove('complaint_level')
+
     if not os.path.exists('./temp/known.csv'):
         type_3_test = test_data[test_data['service_type'] == 3].reset_index()[['user_id']]
         type_3_test['current_service'] = 99104722
