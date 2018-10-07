@@ -43,7 +43,7 @@ def data():
     label_set_1 = {k: i for i, k in enumerate(service_1_label)}
     label_set_4 = {k: i for i, k in enumerate(service_4_label)}
     train_1, train_4 = train[train.service_type == 1], train[train.service_type == 4]
-    test_1, test_4 = test[test.service_type == 1], test[test.service_type == 4 | test.service_type == 3]
+    test_1, test_4 = test[test.service_type == 1], test[(test.service_type == 4) | (test.service_type == 3)]
     test_1.drop('service_type', axis=1, inplace=True)
     test_4.drop('service_type', axis=1, inplace=True)
     val_1, val_4 = val[val.service_type == 1], val[val.service_type == 4]
