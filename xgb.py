@@ -9,7 +9,7 @@ warnings.filterwarnings('ignore')
 
 fold = 7
 param1 = {'max_depth': 6, 'silent': 1, 'objective': 'multi:softprob', 'num_class': 3}
-param4 = {'learning_rate': 0.05, 'n_estimators': 400, 'max_depth': 6, 'min_child_weight': 1, 'seed': 0,
+param4 = {'learning_rate': 0.05, 'n_estimators': 400, 'max_depth': 6, 'min_child_weight': 1, 'seed': 1030,
           'subsample': 0.8, 'colsample_bytree': 0.8, 'gamma': 0, 'reg_alpha': 0, 'reg_lambda': 1, 'n_jobs': -1,
           'num_class': 8, 'silent': 1, 'objective': 'multi:softprob'}
 model_path = './temp/xgb/'
@@ -17,7 +17,7 @@ if not os.path.exists(model_path):
     os.mkdir(model_path)
 
 
-def train_model(X, y, test, params, model_num) -> list:
+def train_model(X, y, test, params, model_num) -> (list, float):
     print('This is model %d' % model_num)
     X_test = xgb.DMatrix(data=test)
     xx_score = []
@@ -46,12 +46,18 @@ def train_model(X, y, test, params, model_num) -> list:
     submit = []
     for line in cv_pred:
         submit.append(np.argmax(np.bincount(line)))
-    return submit
+    return submit, np.mean(xx_score)
 
 
 train_1_X, train_1_y, train_4_X, train_4_y, test_1, test_4, service_1_label, service_4_label = data()
-rs_1 = train_model(train_1_X, train_1_y, test_1, param1, 1)
-rs_4 = train_model(train_4_X, train_4_y, test_4, param4, 4)
+rs_1, score_1 = train_model(train_1_X, train_1_y, test_1, param1, 1)
+rs_4, score_4 = train_model(train_4_X, train_4_y, test_4, param4, 4)
+
+avg_score = score_1 * len(train_1_y) / (len(train_1_y) + len(train_4_y)) \
+            + score_4 * len(train_4_y) / (len(train_1_y) + len(train_4_y))
+avg_score = avg_score ** 2
+print('Fin avg score == ', avg_score)
+
 for i, v in enumerate(rs_1):
     rs_1[i] = service_1_label[v]
 for i, v in enumerate(rs_4):
