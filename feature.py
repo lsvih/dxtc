@@ -114,6 +114,21 @@ def load_data():
 
     train, test = train_data[range_features].astype('float64'), test_data[range_features].astype('float64')
 
+    # train['total_fee'] = train['1_total_fee'] + train['2_total_fee'] + train['3_total_fee'] + train['4_total_fee']
+    # test['total_fee'] = test['1_total_fee'] + test['2_total_fee'] + test['3_total_fee'] + test['4_total_fee']
+    #
+    # train['total_fee/online_time'] = train['total_fee'] / train['online_time']
+    # test['total_fee/online_time'] = test['total_fee'] / test['online_time']
+    #
+    # train['1_total_fee/online_time'] = train['1_total_fee'] / train['online_time']
+    # test['1_total_fee/online_time'] = test['1_total_fee'] / test['online_time']
+    #
+    # train['contract_time/online_time'] = train['contract_time'] / train['online_time']
+    # test['contract_time/online_time'] = test['contract_time'] / test['online_time']
+    #
+    # train['pay_times/online_time'] = train['pay_times'] / train['online_time']
+    # test['pay_times/online_time'] = test['pay_times'] / test['online_time']
+
     enc = OneHotEncoder()
     for feature in one_hot_feature:
         enc.fit(train_data[feature].values.reshape(-1, 1))

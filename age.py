@@ -34,6 +34,6 @@ def predict_age(train, test):
     print('predict missed age...')
     X_train = train.drop('age', axis=1)
     y_train = train['age']
-    rf = RandomForestRegressor(random_state=2018, n_estimators=200, max_depth=5, n_jobs=-1, verbose=2)
+    rf = RandomForestRegressor(random_state=2018, n_estimators=250, max_depth=5, n_jobs=-1, verbose=2)
     rf.fit(X_train, y_train)
     return rf.predict(test)
